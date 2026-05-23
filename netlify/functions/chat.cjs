@@ -1,6 +1,40 @@
-// Cargar todos los chunks y unirlos en un solo texto
 const chunks = require('../../src/data/estatuto-chunks.json');
-const textoCompleto = chunks.map(c => c.text).join(' ');
+
+// Función para buscar los chunks más relevantes
+function searchRelevantChunks(question, chunksData, limit = 5) {
+  const questionLower = question.toLowerCase();
+  // Eliminar palabras muy comunes y cortas
+  const keywords = questionLower.split(/\s+/).filter(w => w.length > 3);
+  
+  const scored = chunksData.map(chunk => {
+    const textLower = chunk.text.toLowerCase();
+    let score = 0;
+    // Coincidencia exacta de la frase completa (mucho peso)
+    if (textLower.includes(questionLower)) {
+      score += 100;
+    }
+    // Coincidencia de palabras clave
+    for (const kw of keywords) {
+      const regex = new RegExp(`\\b${kw}\\b`, 'i');
+      if (regex.test(textLower)) {
+        score += 20;
+      } else if (textLower.includes(kw)) {
+        score += 10;
+      }
+    }
+    return { text: chunk.text, score };
+  });
+  
+  // Ordenar por puntaje
+  scored.sort((a, b) => b.score - a.score);
+  const relevant = scored.filter(c => c.score > 0);
+  
+  // Si no encontró nada, devolver los primeros 3 chunks (para tener algo de contexto)
+  if (relevant.length === 0) {
+    return chunksData.slice(0, 3);
+  }
+  return relevant.slice(0, limit);
+}
 
 exports.handler = async (event) => {
   try {
@@ -13,8 +47,12 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'Pregunta requerida' }) };
     }
 
-    // Prompt con el texto completo del Estatuto
-   const prompt = `
+    // Buscar chunks relevantes (máximo 5)
+    const relevantChunks = searchRelevantChunks(question, chunks, 5);
+    const context = relevantChunks.map(c => c.text).join('\n\n---\n\n');
+
+    // Prompt más eficiente y permisivo para saludos
+    const prompt = `
 Eres un asistente virtual especializado en la Universidad Autónoma de Santo Domingo (UASD). Tu función es responder preguntas sobre el Estatuto Orgánico de la UASD.
 
 REGLAS OBLIGATORIAS:
@@ -53,23 +91,17 @@ RESPUESTA:
     }
     
     const data = await response.json();
-    const answer = data.candidates[0].content.parts[0].text;
-
-    // Después de obtener 'answer', agregar:
-const answerCorregida = answer
-  .replace(/Ã¡/g, 'á')
-  .replace(/Ã©/g, 'é')
-  .replace(/Ã­/g, 'í')
-  .replace(/Ã³/g, 'ó')
-  .replace(/Ãº/g, 'ú')
-  .replace(/Ã±/g, 'ñ')
-  .replace(/Ã‘/g, 'Ñ');
-
-  return {
-  statusCode: 200,
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ answer })
-};
+    let answer = data.candidates[0].content.parts[0].text;
+    
+    // Corregir acentos
+    answer = answer
+      .replace(/Ã¡/g, 'á')
+      .replace(/Ã©/g, 'é')
+      .replace(/Ã­/g, 'í')
+      .replace(/Ã³/g, 'ó')
+      .replace(/Ãº/g, 'ú')
+      .replace(/Ã±/g, 'ñ')
+      .replace(/Ã‘/g, 'Ñ');
     
     return {
       statusCode: 200,
@@ -77,13 +109,13 @@ const answerCorregida = answer
       body: JSON.stringify({ answer })
     };
   } catch (error) {
-  console.error('Error detallado en la función chat:', error);
-  return {
-    statusCode: 200, // Importante: devolvemos 200 para que el frontend no muestre el error genérico
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      answer: 'Lo siento, hubo un problema al procesar tu consulta. Por favor, intenta de nuevo en unos momentos.' 
-    })
-  };
-}
+    console.error('Error en la función chat:', error);
+    return {
+      statusCode: 200, // Importante: devolver 200 para que el frontend no muestre error genérico
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        answer: 'Ocurrió un error técnico. Por favor, intenta de nuevo en unos momentos.' 
+      })
+    };
+  }
 };
