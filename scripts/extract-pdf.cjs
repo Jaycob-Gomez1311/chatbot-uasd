@@ -64,11 +64,11 @@ async function extractPDF() {
     await fs.ensureDir(path.dirname(outputPath));
     await fs.writeJson(outputPath, chunks, { spaces: 2 });
     
-    console.log(`✅ PDF procesado correctamente`);
-    console.log(`📄 Chunks generados: ${chunks.length}`);
-    console.log(`📏 Tamaño promedio: ${Math.round(fullText.length / chunks.length)} caracteres por chunk`);
+    console.log(`PDF procesado correctamente`);
+    console.log(`Chunks generados: ${chunks.length}`);
+    console.log(` Tamaño promedio: ${Math.round(fullText.length / chunks.length)} caracteres por chunk`);
   } catch (error) {
-    console.error('❌ Error procesando PDF:', error);
+    console.error('Error procesando PDF:', error);
   }
 }
 
