@@ -48,7 +48,7 @@ exports.handler = async (event) => {
     }
 
     // Buscar chunks relevantes (máximo 5)
-    const relevantChunks = searchRelevantChunks(question, chunks, 5);
+    const relevantChunks = searchRelevantChunks(question, chunks, 2);
     const context = relevantChunks.map(c => c.text).join('\n\n---\n\n');
 
     // Prompt más eficiente y permisivo para saludos
