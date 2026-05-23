@@ -77,10 +77,13 @@ const answerCorregida = answer
       body: JSON.stringify({ answer })
     };
   } catch (error) {
-    console.error(error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ answer: 'Ocurrió un error procesando la consulta.' })
-    };
-  }
+  console.error('Error detallado en la función chat:', error);
+  return {
+    statusCode: 200, // Importante: devolvemos 200 para que el frontend no muestre el error genérico
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      answer: 'Lo siento, hubo un problema al procesar tu consulta. Por favor, intenta de nuevo en unos momentos.' 
+    })
+  };
+}
 };
